@@ -1,5 +1,5 @@
 module Hike
-  VERSION = "1.2.0"
+  VERSION = "1.2.3.wiwo.perf.1"
 
   autoload :Extensions,      "hike/extensions"
   autoload :Index,           "hike/index"

@@ -60,7 +60,12 @@ module Hike
           if relative?(logical_path)
             find_in_base_path(logical_path, base_path, &block)
           else
-            find_in_paths(logical_path, &block)
+            # 2015-12-16 Coridyn:
+            # Replace `find_in_paths(logical_path, &block)` with
+            # a call to `find_in_paths_unsafe` to get a significant
+            # speedup in performance (this change alone can save 
+            # up to 10s on a large build!).
+            find_in_paths_unsafe(logical_path, &block)
           end
         end
 
@@ -113,6 +118,25 @@ module Hike
         dirname, basename = logical_path.split
         @pathnames.each do |base_path|
           match(base_path.join(dirname), basename, &block)
+        end
+      end
+      
+      # 2015-12-15 - Coridyn
+      # Because we control the paths being set as @pathnames
+      # we can get a big speed increase by replacing 
+      # `Pathname.join` with a simple string concatenation.
+      # 
+      # We can assume the '/' path separator (even on Windows) 
+      # because this is how Hike/Sprockets represents paths
+      # internally anyway, so the concatenation should be valid.
+      # 
+      # NOTE: Make sure there aren't trailing slashes when configuring
+      # the paths for Hike/Sprockets otherwise this might fail (!).
+      def find_in_paths_unsafe(logical_path, &block)
+        dirname, basename = logical_path.split
+        @pathnames.each do |base_path|
+          temp_search_path = Pathname.new(base_path.to_s + '/' + dirname.to_s)
+          match(temp_search_path, basename, &block)
         end
       end
 
